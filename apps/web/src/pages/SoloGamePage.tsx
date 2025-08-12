@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   GameState, 
@@ -19,11 +19,18 @@ const SoloGamePage: React.FC = () => {
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [aiRetryCount, setAiRetryCount] = useState(0);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [pendingWildCard, setPendingWildCard] = useState<{ cardIndex: number } | null>(null);
   const { playSound } = useSound();
 
   // Initialize game
   const startNewGame = () => {
+    // Clear any pending AI timeout
+    if (aiTimeoutRef.current) {
+      clearTimeout(aiTimeoutRef.current);
+      aiTimeoutRef.current = null;
+    }
+    
     const newGame = createGame({
       seed: Date.now().toString(),
       players: [
@@ -46,14 +53,20 @@ const SoloGamePage: React.FC = () => {
 
     const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
     if (currentPlayer && currentPlayer.isBot) {
+      // Clear any existing timeout to prevent multiple AI processes
+      if (aiTimeoutRef.current) {
+        clearTimeout(aiTimeoutRef.current);
+      }
+      
       setIsProcessingAI(true);
       
       // Add a small delay to make AI moves visible
-      const timeoutId = setTimeout(() => {
+      aiTimeoutRef.current = setTimeout(() => {
         // Double-check state hasn't changed during timeout
         if (!gameState || isTerminal(gameState)) {
           setIsProcessingAI(false);
           setAiRetryCount(0);
+          aiTimeoutRef.current = null;
           return;
         }
         
@@ -94,11 +107,15 @@ const SoloGamePage: React.FC = () => {
           }
         }
         setIsProcessingAI(false);
+        aiTimeoutRef.current = null;
       }, 1000);
 
       // Cleanup function to prevent multiple timeouts
       return () => {
-        clearTimeout(timeoutId);
+        if (aiTimeoutRef.current) {
+          clearTimeout(aiTimeoutRef.current);
+          aiTimeoutRef.current = null;
+        }
         setIsProcessingAI(false);
       };
     } else {
