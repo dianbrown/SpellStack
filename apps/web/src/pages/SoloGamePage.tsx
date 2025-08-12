@@ -5,11 +5,12 @@ import {
   createGame, 
   legalMoves, 
   applyMove, 
+  applyAutomaticDrawCards,
   chooseAIMove, 
   isTerminal,
   CardColor,
   AIDifficulty
-} from '@uno-game/engine';
+} from '@spellstack/engine';
 import { Hand } from '../components/Hand';
 import { useSound } from '../contexts/SoundContext-simple';
 
@@ -47,6 +48,26 @@ const SoloGamePage: React.FC = () => {
     setAiRetryCount(0);
   };
 
+  // Handle automatic draw cards from +2/+4 effects - DISABLED FOR AI PLAYERS
+  useEffect(() => {
+    if (!gameState || isTerminal(gameState)) return;
+
+    const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
+    
+    // Only auto-apply draw cards for human players, let AI handle it through normal move system
+    if (gameState.drawCount > 0 && currentPlayer && !currentPlayer.isBot) {
+      console.log(`Auto-applying draw cards for human player ${gameState.currentPlayerId}, count: ${gameState.drawCount}`);
+      const newState = applyAutomaticDrawCards(gameState);
+      if (newState !== gameState) { // Only update if cards were actually drawn
+        console.log(`Cards auto-drawn, new drawCount: ${newState.drawCount}, turn now: ${newState.currentPlayerId}`);
+        setGameState(newState);
+        playSound('cardDraw');
+      } else {
+        console.log('No automatic draw applied (player might have stackable cards)');
+      }
+    }
+  }, [gameState, playSound]);
+
   // Handle AI turns
   useEffect(() => {
     if (!gameState || isTerminal(gameState) || isProcessingAI) return;
@@ -62,15 +83,29 @@ const SoloGamePage: React.FC = () => {
       
       // Add a small delay to make AI moves visible
       aiTimeoutRef.current = setTimeout(() => {
-        // Double-check state hasn't changed during timeout
+        // Get fresh game state and current player to ensure we have the latest state
         if (!gameState || isTerminal(gameState)) {
+          console.log('AI timeout: Game state invalid or terminal');
           setIsProcessingAI(false);
           setAiRetryCount(0);
           aiTimeoutRef.current = null;
           return;
         }
+
+        const freshCurrentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
+        if (!freshCurrentPlayer || !freshCurrentPlayer.isBot) {
+          console.log('AI timeout: Current player is not a bot anymore');
+          setIsProcessingAI(false);
+          setAiRetryCount(0);
+          aiTimeoutRef.current = null;
+          return;
+        }
+
+        console.log(`AI processing turn for ${freshCurrentPlayer.id}, drawCount: ${gameState.drawCount}`);
         
-        const aiMove = chooseAIMove(gameState, currentPlayer.id, AIDifficulty.Medium);
+        const aiMove = chooseAIMove(gameState, freshCurrentPlayer.id, AIDifficulty.Medium);
+        console.log(`AI chose move:`, aiMove);
+        
         if (aiMove) {
           try {
             const newState = applyMove(gameState, aiMove);
@@ -227,7 +262,7 @@ const SoloGamePage: React.FC = () => {
             <div className="text-6xl mb-6">🎮</div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Ready to Play?</h2>
             <p className="text-gray-600 mb-8">
-              Challenge 3 AI opponents in a classic game of UNO. 
+              Challenge 3 AI opponents in a classic game of SpellStack. 
               First to empty your hand wins!
             </p>
             <button
@@ -265,7 +300,7 @@ const SoloGamePage: React.FC = () => {
       <div className="container mx-auto max-w-6xl">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-white">UNO Solo</h1>
+          <h1 className="text-3xl font-bold text-white">SpellStack Solo</h1>
           <div className="flex gap-4">
             <button
               onClick={startNewGame}

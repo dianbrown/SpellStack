@@ -1,6 +1,6 @@
-# UNO Game - Web-based Card Game
+# SpellStack - Web-based Card Game
 
-A modern, full-featured UNO-like card game built with React, TypeScript, and Supabase. Features both singleplayer (vs AI) and multiplayer modes, with PWA support for offline play.
+A modern, full-featured SpellStack card game built with React, TypeScript, and Supabase. Features both singleplayer (vs AI) and multiplayer modes, with PWA support for offline play.
 
 ## 🎮 Features
 
@@ -119,8 +119,8 @@ pnpm type-check
 pnpm build
 
 # Build specific workspace
-pnpm --filter @uno-game/engine build
-pnpm --filter @uno-game/web build
+pnpm --filter @spellstack/engine build
+pnpm --filter @spellstack/web build
 ```
 
 ### Deployment Options
@@ -414,7 +414,7 @@ The core game logic is implemented as a pure TypeScript library:
 ### Game Engine
 
 ```typescript
-import { createGame, applyMove, legalMoves } from '@uno-game/engine';
+import { createGame, applyMove, legalMoves } from '@spellstack/engine';
 
 // Create new game
 const game = createGame({

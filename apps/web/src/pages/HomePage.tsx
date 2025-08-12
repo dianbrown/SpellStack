@@ -6,7 +6,7 @@ const HomePage: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto text-center">
         <h1 className="text-6xl font-bold text-gray-800 mb-4">
-          UNO
+          SpellStack
         </h1>
         <p className="text-xl text-gray-600 mb-12">
           Play the classic card game online with friends or against AI

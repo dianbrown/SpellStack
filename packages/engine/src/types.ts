@@ -67,7 +67,7 @@ export const PlayerSchema = z.object({
   name: z.string(),
   isBot: z.boolean().default(false),
   handSize: z.number().min(0), // Public info
-  calledUno: z.boolean().default(false),
+  calledSpell: z.boolean().default(false),
 });
 
 export const GameStateSchema = z.object({
@@ -86,7 +86,7 @@ export const GameStateSchema = z.object({
   lastDrawnCard: CardSchema.optional(),
   seed: z.string(),
   settings: z.object({
-    unoCallRequired: z.boolean().default(false),
+    spellCallRequired: z.boolean().default(false),
     stackDrawCards: z.boolean().default(true),
     maxPlayers: z.number().min(2).max(4).default(4),
   }),

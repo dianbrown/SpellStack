@@ -46,7 +46,7 @@ export function createGame(options: CreateGameOptions): GameState {
       name: p.name,
       isBot: p.isBot || false,
       handSize: hands[p.id].length,
-      calledUno: false,
+      calledSpell: false,
     })),
     currentPlayerId: players[0].id,
     direction: Direction.Clockwise,
@@ -59,12 +59,44 @@ export function createGame(options: CreateGameOptions): GameState {
     canPlayDrawnCard: false,
     seed,
     settings: {
-      unoCallRequired: false,
+      spellCallRequired: false,
       stackDrawCards: true,
       maxPlayers: 4,
       ...settings,
     },
   };
+}
+
+/**
+ * Apply automatic draw cards if player is affected by +2/+4 cards
+ * Returns the updated game state with cards drawn automatically
+ */
+export function applyAutomaticDrawCards(state: GameState, rng?: RNG): GameState {
+  if (state.drawCount === 0) {
+    return state; // No cards to draw
+  }
+
+  const playerId = state.currentPlayerId;
+  const playerHand = state.playerHands[playerId] || [];
+  
+  // Check if player has stackable cards (+2 or +4) when stacking is enabled
+  if (state.settings.stackDrawCards) {
+    const hasStackableCards = playerHand.some(card => 
+      (card.type === CardType.DrawTwo && 
+       (state.topCard.type === CardType.DrawTwo || state.topCard.type === CardType.WildDrawFour)) ||
+      card.type === CardType.WildDrawFour
+    );
+    
+    // If player has stackable cards, don't auto-draw (let them choose)
+    if (hasStackableCards) {
+      return state;
+    }
+  }
+  
+  // Auto-draw the required cards
+  const currentRng = rng || new RNG(state.seed + state.discardPile.length);
+  const newState = JSON.parse(JSON.stringify(state)) as GameState;
+  return applyDrawCard(newState, currentRng);
 }
 
 /**
@@ -78,7 +110,8 @@ export function legalMoves(state: GameState, playerId: PlayerId): Move[] {
   const moves: Move[] = [];
   const playerHand = state.playerHands[playerId] || [];
   
-  // If player must draw cards due to +2/+4, only draw or play matching draw card
+  // If player must draw cards due to +2/+4, automatically draw them first
+  // Only return stacking moves if they have stackable cards
   if (state.drawCount > 0) {
     // Can play another +2 or +4 if stacking is enabled
     if (state.settings.stackDrawCards) {
@@ -100,8 +133,10 @@ export function legalMoves(state: GameState, playerId: PlayerId): Move[] {
       }
     }
     
-    // Always can draw cards
-    moves.push({ type: 'draw_card' });
+    // If no stacking cards available, force automatic draw
+    if (moves.length === 0) {
+      moves.push({ type: 'draw_card' });
+    }
     return moves;
   }
 
@@ -155,8 +190,8 @@ export function legalMoves(state: GameState, playerId: PlayerId): Move[] {
     moves.push({ type: 'draw_card' });
   }
 
-  // UNO call if down to one card
-  if (playerHand.length === 1 && state.settings.unoCallRequired) {
+  // SpellStack call if down to one card
+  if (playerHand.length === 1 && state.settings.spellCallRequired) {
     moves.push({ type: 'call_uno' });
   }
 
@@ -309,7 +344,7 @@ function applyPassTurn(state: GameState): GameState {
 function applyCallUno(state: GameState): GameState {
   const playerId = state.currentPlayerId;
   const player = state.players.find(p => p.id === playerId)!;
-  player.calledUno = true;
+  player.calledSpell = true;
   return state;
 }
 

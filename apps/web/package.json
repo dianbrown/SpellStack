@@ -1,5 +1,5 @@
 {
-  "name": "@uno-game/web",
+  "name": "@spellstack/web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,7 +12,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@uno-game/engine": "workspace:*",
+    "@spellstack/engine": "workspace:*",
     "@supabase/supabase-js": "^2.39.7",
     "@xstate/react": "^4.1.0",
     "framer-motion": "^11.0.8",
