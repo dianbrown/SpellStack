@@ -105,7 +105,7 @@ export function legalMoves(state: GameState, playerId: PlayerId): Move[] {
     return moves;
   }
 
-  // If player just drew a card, they can play it if legal
+  // If player just drew a card, they can either play it (if legal) or pass turn
   if (state.canPlayDrawnCard && state.lastDrawnCard) {
     if (isCardPlayable(state.lastDrawnCard, state.topCard, state.currentColor)) {
       if (state.lastDrawnCard.type === CardType.Wild || 
@@ -121,6 +121,8 @@ export function legalMoves(state: GameState, playerId: PlayerId): Move[] {
         moves.push({ type: 'play_card', cardId: state.lastDrawnCard.id });
       }
     }
+    // Always allow passing turn after drawing a card
+    moves.push({ type: 'pass_turn' });
     return moves;
   }
 
@@ -148,7 +150,7 @@ export function legalMoves(state: GameState, playerId: PlayerId): Move[] {
     }
   }
 
-  // Can always draw if no playable cards
+  // Can only draw if no playable cards exist
   if (moves.length === 0) {
     moves.push({ type: 'draw_card' });
   }
@@ -203,6 +205,8 @@ export function applyMove(state: GameState, move: Move, rng?: RNG): GameState {
       return applyPlayCard(newState, move.cardId, move.chosenColor, currentRng);
     case 'draw_card':
       return applyDrawCard(newState, currentRng);
+    case 'pass_turn':
+      return applyPassTurn(newState);
     case 'call_uno':
       return applyCallUno(newState);
     default:
@@ -259,8 +263,8 @@ function applyPlayCard(
     return state;
   }
 
-  // Advance turn if not skipped by card effect
-  if (!isPlayerSkipped(card)) {
+  // Advance turn (Skip cards handle their own turn advancement)
+  if (card.type !== CardType.Skip) {
     advanceTurn(state);
   }
 
@@ -278,20 +282,27 @@ function applyDrawCard(state: GameState, rng: RNG): GameState {
       state.playerHands[playerId].push(card);
       state.players.find(p => p.id === playerId)!.handSize++;
       
-      // If drawing one card and it's the last card drawn, allow immediate play
-      if (drawAmount === 1 && i === 0) {
+      // If drawing one card voluntarily (not due to +2/+4), allow choice to play or pass
+      if (drawAmount === 1 && i === 0 && state.drawCount === 0) {
         state.lastDrawnCard = card;
         state.canPlayDrawnCard = true;
+        // Don't advance turn yet - player gets to choose play or pass
+        return state;
       }
     }
   }
 
-  // Reset draw count and advance turn
+  // Reset draw count and advance turn (for forced draws like +2/+4)
   state.drawCount = 0;
-  if (!state.canPlayDrawnCard) {
-    advanceTurn(state);
-  }
+  advanceTurn(state);
+  return state;
+}
 
+function applyPassTurn(state: GameState): GameState {
+  // Reset draw state and advance turn
+  state.canPlayDrawnCard = false;
+  state.lastDrawnCard = undefined;
+  advanceTurn(state);
   return state;
 }
 
@@ -310,42 +321,39 @@ function handleCardEffect(
 ): void {
   switch (card.type) {
     case CardType.Skip:
+      // Skip card: advance turn twice (current player + skip next player)
       advanceTurn(state);
-      advanceTurn(state); // Skip the next player
+      advanceTurn(state);
       break;
       
     case CardType.Reverse:
+      // Reverse card: change direction but don't advance turn here
       state.direction = state.direction === Direction.Clockwise 
         ? Direction.CounterClockwise 
         : Direction.Clockwise;
-      advanceTurn(state);
       break;
       
     case CardType.DrawTwo:
+      // Draw two: set draw count but don't advance turn here
       state.drawCount += 2;
-      advanceTurn(state);
       break;
       
     case CardType.Wild:
+      // Wild card: set color but don't advance turn here
       state.currentColor = chosenColor || CardColor.Red;
-      advanceTurn(state);
       break;
       
     case CardType.WildDrawFour:
+      // Wild +4: set color and draw count but don't advance turn here
       state.currentColor = chosenColor || CardColor.Red;
       state.drawCount += 4;
-      advanceTurn(state);
       break;
       
     default:
+      // Number cards: set color but don't advance turn here
       state.currentColor = card.color;
-      advanceTurn(state);
       break;
   }
-}
-
-function isPlayerSkipped(card: Card): boolean {
-  return card.type === CardType.Skip;
 }
 
 function advanceTurn(state: GameState): void {

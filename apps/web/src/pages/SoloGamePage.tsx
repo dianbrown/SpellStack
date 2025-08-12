@@ -202,6 +202,21 @@ const SoloGamePage: React.FC = () => {
     playSound('cardDraw');
   };
 
+  const handlePassTurn = () => {
+    if (!gameState || isTerminal(gameState)) return;
+
+    const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
+    if (!currentPlayer || currentPlayer.id !== 'human') return;
+
+    const move = {
+      type: 'pass_turn' as const
+    };
+
+    const newState = applyMove(gameState, move);
+    setGameState(newState);
+    playSound('buttonClick');
+  };
+
   // Game setup screen
   if (!gameState) {
     return (
@@ -279,6 +294,14 @@ const SoloGamePage: React.FC = () => {
                   {isProcessingAI && " (thinking...)"}
                 </span>
               )}
+              {/* Show card draw feedback */}
+              {gameState.canPlayDrawnCard && gameState.lastDrawnCard && isHumanTurn && (
+                <div className="text-sm text-yellow-200 mt-1">
+                  Drew: {gameState.lastDrawnCard.color} {gameState.lastDrawnCard.type} 
+                  {gameState.lastDrawnCard.value !== undefined ? ` ${gameState.lastDrawnCard.value}` : ''}
+                  {playableCardIds.includes(gameState.lastDrawnCard.id) ? " - You can play this card!" : " - Can't play, pass your turn"}
+                </div>
+              )}
             </div>
             <div className="text-sm">
               Direction: {gameState.direction === 'clockwise' ? "↻" : "↺"}
@@ -338,13 +361,26 @@ const SoloGamePage: React.FC = () => {
 
         {/* Action Buttons */}
         {isHumanTurn && !gameEnded && (
-          <div className="flex justify-center mb-6">
-            <button
-              onClick={handleDrawCard}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-            >
-              Draw Card
-            </button>
+          <div className="flex justify-center gap-4 mb-6">
+            {/* Show Draw Card button only if player hasn't drawn yet and has no playable cards */}
+            {!gameState.canPlayDrawnCard && playableCardIds.length === 0 && (
+              <button
+                onClick={handleDrawCard}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              >
+                Draw Card
+              </button>
+            )}
+            
+            {/* Show Pass Turn button only if player just drew a card */}
+            {gameState.canPlayDrawnCard && (
+              <button
+                onClick={handlePassTurn}
+                className="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors"
+              >
+                Pass Turn
+              </button>
+            )}
           </div>
         )}
 

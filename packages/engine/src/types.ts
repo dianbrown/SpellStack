@@ -51,6 +51,9 @@ export const MoveSchema = z.discriminatedUnion('type', [
     type: z.literal('draw_card'),
   }),
   z.object({
+    type: z.literal('pass_turn'),
+  }),
+  z.object({
     type: z.literal('call_uno'),
   }),
   z.object({
