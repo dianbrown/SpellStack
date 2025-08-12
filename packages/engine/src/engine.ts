@@ -1,0 +1,401 @@
+import { 
+  GameState, 
+  Card, 
+  Move, 
+  PlayerId, 
+  CardColor, 
+  CardType, 
+  Direction, 
+  GamePhase,
+  CreateGameOptions,
+  GameResult
+} from './types.js';
+import { RNG, createDeck, dealCards, calculateHandScore } from './deck.js';
+
+/**
+ * Create a new game with initial state
+ */
+export function createGame(options: CreateGameOptions): GameState {
+  const { players, seed, settings = {} } = options;
+  
+  if (players.length < 2 || players.length > 4) {
+    throw new Error('Game requires 2-4 players');
+  }
+
+  const rng = new RNG(seed);
+  const deck = rng.shuffle(createDeck());
+  
+  const { hands, remainingDeck } = dealCards(deck, players.map(p => p.id));
+  
+  // Find a valid starting card (not a wild or wild draw four)
+  let topCard: Card;
+  let startDeck = [...remainingDeck];
+  
+  do {
+    if (startDeck.length === 0) {
+      throw new Error('No valid starting card found');
+    }
+    topCard = startDeck.pop()!;
+  } while (topCard.type === CardType.Wild || topCard.type === CardType.WildDrawFour);
+
+  return {
+    id: `game-${Date.now()}`,
+    phase: GamePhase.Playing,
+    players: players.map(p => ({
+      id: p.id,
+      name: p.name,
+      isBot: p.isBot || false,
+      handSize: hands[p.id].length,
+      calledUno: false,
+    })),
+    currentPlayerId: players[0].id,
+    direction: Direction.Clockwise,
+    topCard,
+    currentColor: topCard.color === CardColor.Wild ? CardColor.Red : topCard.color,
+    drawPile: startDeck,
+    discardPile: [topCard],
+    playerHands: hands,
+    drawCount: 0,
+    canPlayDrawnCard: false,
+    seed,
+    settings: {
+      unoCallRequired: false,
+      stackDrawCards: true,
+      maxPlayers: 4,
+      ...settings,
+    },
+  };
+}
+
+/**
+ * Get all legal moves for a player
+ */
+export function legalMoves(state: GameState, playerId: PlayerId): Move[] {
+  if (state.phase !== GamePhase.Playing || state.currentPlayerId !== playerId) {
+    return [];
+  }
+
+  const moves: Move[] = [];
+  const playerHand = state.playerHands[playerId] || [];
+  
+  // If player must draw cards due to +2/+4, only draw or play matching draw card
+  if (state.drawCount > 0) {
+    // Can play another +2 or +4 if stacking is enabled
+    if (state.settings.stackDrawCards) {
+      const stackableCards = playerHand.filter(card => 
+        card.type === CardType.DrawTwo || card.type === CardType.WildDrawFour
+      );
+      
+      for (const card of stackableCards) {
+        if (card.type === CardType.DrawTwo && 
+            (state.topCard.type === CardType.DrawTwo || 
+             state.topCard.type === CardType.WildDrawFour)) {
+          moves.push({ type: 'play_card', cardId: card.id });
+        } else if (card.type === CardType.WildDrawFour) {
+          // Wild +4 can stack on any draw card
+          for (const color of [CardColor.Red, CardColor.Green, CardColor.Blue, CardColor.Yellow]) {
+            moves.push({ type: 'play_card', cardId: card.id, chosenColor: color });
+          }
+        }
+      }
+    }
+    
+    // Always can draw cards
+    moves.push({ type: 'draw_card' });
+    return moves;
+  }
+
+  // If player just drew a card, they can play it if legal
+  if (state.canPlayDrawnCard && state.lastDrawnCard) {
+    if (isCardPlayable(state.lastDrawnCard, state.topCard, state.currentColor)) {
+      if (state.lastDrawnCard.type === CardType.Wild || 
+          state.lastDrawnCard.type === CardType.WildDrawFour) {
+        for (const color of [CardColor.Red, CardColor.Green, CardColor.Blue, CardColor.Yellow]) {
+          moves.push({ 
+            type: 'play_card', 
+            cardId: state.lastDrawnCard.id, 
+            chosenColor: color 
+          });
+        }
+      } else {
+        moves.push({ type: 'play_card', cardId: state.lastDrawnCard.id });
+      }
+    }
+    return moves;
+  }
+
+  // Normal turn: can play any legal card or draw
+  for (const card of playerHand) {
+    if (isCardPlayable(card, state.topCard, state.currentColor)) {
+      if (card.type === CardType.Wild || card.type === CardType.WildDrawFour) {
+        // Wild cards require color choice
+        for (const color of [CardColor.Red, CardColor.Green, CardColor.Blue, CardColor.Yellow]) {
+          // Wild +4 can only be played if player has no matching color
+          if (card.type === CardType.WildDrawFour) {
+            const hasMatchingColor = playerHand.some(c => 
+              c.id !== card.id && c.color === state.currentColor
+            );
+            if (!hasMatchingColor) {
+              moves.push({ type: 'play_card', cardId: card.id, chosenColor: color });
+            }
+          } else {
+            moves.push({ type: 'play_card', cardId: card.id, chosenColor: color });
+          }
+        }
+      } else {
+        moves.push({ type: 'play_card', cardId: card.id });
+      }
+    }
+  }
+
+  // Can always draw if no playable cards
+  if (moves.length === 0) {
+    moves.push({ type: 'draw_card' });
+  }
+
+  // UNO call if down to one card
+  if (playerHand.length === 1 && state.settings.unoCallRequired) {
+    moves.push({ type: 'call_uno' });
+  }
+
+  return moves;
+}
+
+/**
+ * Check if a card can be played on top of another card
+ */
+function isCardPlayable(card: Card, topCard: Card, currentColor: CardColor): boolean {
+  // Wild cards can always be played
+  if (card.type === CardType.Wild || card.type === CardType.WildDrawFour) {
+    return true;
+  }
+
+  // Match color
+  if (card.color === currentColor) {
+    return true;
+  }
+
+  // Match type (number or action)
+  if (card.type === topCard.type) {
+    if (card.type === CardType.Number && card.value === topCard.value) {
+      return true;
+    } else if (card.type !== CardType.Number) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Apply a move to the game state (pure function)
+ */
+export function applyMove(state: GameState, move: Move, rng?: RNG): GameState {
+  if (state.phase !== GamePhase.Playing) {
+    throw new Error('Cannot apply move outside of playing phase');
+  }
+
+  const currentRng = rng || new RNG(state.seed + state.discardPile.length);
+  const newState = JSON.parse(JSON.stringify(state)) as GameState;
+
+  switch (move.type) {
+    case 'play_card':
+      return applyPlayCard(newState, move.cardId, move.chosenColor, currentRng);
+    case 'draw_card':
+      return applyDrawCard(newState, currentRng);
+    case 'call_uno':
+      return applyCallUno(newState);
+    default:
+      throw new Error(`Unknown move type: ${(move as any).type}`);
+  }
+}
+
+function applyPlayCard(
+  state: GameState, 
+  cardId: string, 
+  chosenColor?: CardColor,
+  rng?: RNG
+): GameState {
+  const playerId = state.currentPlayerId;
+  const playerHand = state.playerHands[playerId];
+  const cardIndex = playerHand.findIndex(c => c.id === cardId);
+  
+  if (cardIndex === -1) {
+    throw new Error('Player does not have this card');
+  }
+
+  const card = playerHand[cardIndex];
+  
+  // Validate move is legal
+  const legal = legalMoves(state, playerId);
+  const isLegal = legal.some(move => 
+    move.type === 'play_card' && 
+    move.cardId === cardId &&
+    move.chosenColor === chosenColor
+  );
+  
+  if (!isLegal) {
+    throw new Error('Illegal move');
+  }
+
+  // Remove card from hand
+  state.playerHands[playerId].splice(cardIndex, 1);
+  state.players.find(p => p.id === playerId)!.handSize--;
+
+  // Add to discard pile
+  state.discardPile.push(card);
+  state.topCard = card;
+
+  // Handle card effects
+  handleCardEffect(state, card, chosenColor, rng);
+
+  // Reset draw state
+  state.canPlayDrawnCard = false;
+  state.lastDrawnCard = undefined;
+
+  // Check for round end
+  if (state.playerHands[playerId].length === 0) {
+    state.phase = GamePhase.RoundEnd;
+    return state;
+  }
+
+  // Advance turn if not skipped by card effect
+  if (!isPlayerSkipped(card)) {
+    advanceTurn(state);
+  }
+
+  return state;
+}
+
+function applyDrawCard(state: GameState, rng: RNG): GameState {
+  const playerId = state.currentPlayerId;
+  const drawAmount = Math.max(1, state.drawCount);
+  
+  // Draw cards
+  for (let i = 0; i < drawAmount; i++) {
+    const card = drawCardFromPile(state, rng);
+    if (card) {
+      state.playerHands[playerId].push(card);
+      state.players.find(p => p.id === playerId)!.handSize++;
+      
+      // If drawing one card and it's the last card drawn, allow immediate play
+      if (drawAmount === 1 && i === 0) {
+        state.lastDrawnCard = card;
+        state.canPlayDrawnCard = true;
+      }
+    }
+  }
+
+  // Reset draw count and advance turn
+  state.drawCount = 0;
+  if (!state.canPlayDrawnCard) {
+    advanceTurn(state);
+  }
+
+  return state;
+}
+
+function applyCallUno(state: GameState): GameState {
+  const playerId = state.currentPlayerId;
+  const player = state.players.find(p => p.id === playerId)!;
+  player.calledUno = true;
+  return state;
+}
+
+function handleCardEffect(
+  state: GameState, 
+  card: Card, 
+  chosenColor?: CardColor,
+  rng?: RNG
+): void {
+  switch (card.type) {
+    case CardType.Skip:
+      advanceTurn(state);
+      advanceTurn(state); // Skip the next player
+      break;
+      
+    case CardType.Reverse:
+      state.direction = state.direction === Direction.Clockwise 
+        ? Direction.CounterClockwise 
+        : Direction.Clockwise;
+      advanceTurn(state);
+      break;
+      
+    case CardType.DrawTwo:
+      state.drawCount += 2;
+      advanceTurn(state);
+      break;
+      
+    case CardType.Wild:
+      state.currentColor = chosenColor || CardColor.Red;
+      advanceTurn(state);
+      break;
+      
+    case CardType.WildDrawFour:
+      state.currentColor = chosenColor || CardColor.Red;
+      state.drawCount += 4;
+      advanceTurn(state);
+      break;
+      
+    default:
+      state.currentColor = card.color;
+      advanceTurn(state);
+      break;
+  }
+}
+
+function isPlayerSkipped(card: Card): boolean {
+  return card.type === CardType.Skip;
+}
+
+function advanceTurn(state: GameState): void {
+  const currentIndex = state.players.findIndex(p => p.id === state.currentPlayerId);
+  const increment = state.direction === Direction.Clockwise ? 1 : -1;
+  const nextIndex = (currentIndex + increment + state.players.length) % state.players.length;
+  state.currentPlayerId = state.players[nextIndex].id;
+}
+
+function drawCardFromPile(state: GameState, rng: RNG): Card | null {
+  if (state.drawPile.length === 0) {
+    // Reshuffle discard pile into draw pile
+    if (state.discardPile.length <= 1) {
+      return null; // No cards left
+    }
+    
+    const topCard = state.discardPile.pop()!;
+    state.drawPile = rng.shuffle([...state.discardPile]);
+    state.discardPile = [topCard];
+  }
+  
+  return state.drawPile.pop() || null;
+}
+
+/**
+ * Check if game is in terminal state
+ */
+export function isTerminal(state: GameState): boolean {
+  return state.phase === GamePhase.RoundEnd || state.phase === GamePhase.GameEnd;
+}
+
+/**
+ * Calculate game result and scores
+ */
+export function score(state: GameState): GameResult {
+  const scores: Record<PlayerId, number> = {};
+  let winner: PlayerId | null = null;
+
+  for (const player of state.players) {
+    const handScore = calculateHandScore(state.playerHands[player.id]);
+    scores[player.id] = handScore;
+    
+    if (handScore === 0) {
+      winner = player.id;
+    }
+  }
+
+  return {
+    winner,
+    scores,
+    isTerminal: isTerminal(state),
+  };
+}

@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply font-game;
+  }
+  
+  body {
+    @apply bg-gradient-to-br from-green-100 to-blue-100 min-h-screen;
+  }
+}
+
+@layer components {
+  .card {
+    @apply relative w-16 h-24 md:w-20 md:h-28 rounded-lg shadow-lg transform transition-all duration-200 cursor-pointer;
+  }
+  
+  .card:hover {
+    @apply -translate-y-2 shadow-xl;
+  }
+  
+  .card-red {
+    @apply bg-gradient-to-br from-red-400 to-red-600 text-white;
+  }
+  
+  .card-green {
+    @apply bg-gradient-to-br from-green-400 to-green-600 text-white;
+  }
+  
+  .card-blue {
+    @apply bg-gradient-to-br from-blue-400 to-blue-600 text-white;
+  }
+  
+  .card-yellow {
+    @apply bg-gradient-to-br from-yellow-400 to-yellow-600 text-black;
+  }
+  
+  .card-wild {
+    @apply bg-gradient-to-br from-gray-700 to-gray-900 text-white;
+  }
+  
+  .card-back {
+    @apply bg-gradient-to-br from-gray-800 to-black;
+  }
+  
+  .btn-primary {
+    @apply px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transform hover:scale-105 transition-all duration-200 shadow-md;
+  }
+  
+  .btn-secondary {
+    @apply px-6 py-3 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transform hover:scale-105 transition-all duration-200 shadow-md;
+  }
+  
+  .btn-danger {
+    @apply px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transform hover:scale-105 transition-all duration-200 shadow-md;
+  }
+}
