@@ -17,6 +17,7 @@ const SoloGamePage: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
+  const [aiRetryCount, setAiRetryCount] = useState(0);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pendingWildCard, setPendingWildCard] = useState<{ cardIndex: number } | null>(null);
   const { playSound } = useSound();
@@ -36,6 +37,7 @@ const SoloGamePage: React.FC = () => {
     setSelectedCardId(null);
     setShowColorPicker(false);
     setPendingWildCard(null);
+    setAiRetryCount(0);
   };
 
   // Handle AI turns
@@ -47,17 +49,63 @@ const SoloGamePage: React.FC = () => {
       setIsProcessingAI(true);
       
       // Add a small delay to make AI moves visible
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
+        // Double-check state hasn't changed during timeout
+        if (!gameState || isTerminal(gameState)) {
+          setIsProcessingAI(false);
+          setAiRetryCount(0);
+          return;
+        }
+        
         const aiMove = chooseAIMove(gameState, currentPlayer.id, AIDifficulty.Medium);
         if (aiMove) {
-          const newState = applyMove(gameState, aiMove);
-          setGameState(newState);
-          playSound('cardPlay');
+          try {
+            const newState = applyMove(gameState, aiMove);
+            setGameState(newState);
+            setAiRetryCount(0); // Reset retry count on success
+            playSound('cardPlay');
+          } catch (error) {
+            console.error('Error applying AI move:', error);
+            // If AI fails repeatedly, force a draw card move
+            if (aiRetryCount >= 3) {
+              try {
+                const drawMove = { type: 'draw_card' as const };
+                const newState = applyMove(gameState, drawMove);
+                setGameState(newState);
+                setAiRetryCount(0);
+                console.warn('AI failed multiple times, forcing draw card');
+              } catch (drawError) {
+                console.error('Failed to force draw card, game may be stuck:', drawError);
+              }
+            } else {
+              setAiRetryCount(prev => prev + 1);
+            }
+          }
+        } else {
+          // No valid move found, try to draw a card
+          try {
+            const drawMove = { type: 'draw_card' as const };
+            const newState = applyMove(gameState, drawMove);
+            setGameState(newState);
+            setAiRetryCount(0);
+          } catch (error) {
+            console.error('AI cannot draw card either:', error);
+            setAiRetryCount(prev => prev + 1);
+          }
         }
         setIsProcessingAI(false);
       }, 1000);
+
+      // Cleanup function to prevent multiple timeouts
+      return () => {
+        clearTimeout(timeoutId);
+        setIsProcessingAI(false);
+      };
+    } else {
+      // Reset retry count when it's human turn
+      setAiRetryCount(0);
     }
-  }, [gameState, isProcessingAI, playSound]);
+  }, [gameState, playSound, aiRetryCount]); // Added aiRetryCount to dependencies
 
   const handleCardClick = (cardId: string) => {
     if (!gameState || isTerminal(gameState)) return;
