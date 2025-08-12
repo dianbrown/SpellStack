@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Card as GameCard, CardColor, CardType } from '@uno-game/engine';
+import { Card as GameCard, CardColor, CardType } from '@spellstack/engine';
 
 interface CardProps {
   card: GameCard;

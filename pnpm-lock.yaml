@@ -26,15 +26,15 @@ importers:
 
   apps/web:
     dependencies:
+      '@spellstack/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@supabase/supabase-js':
         specifier: ^2.39.7
         version: 2.55.0
       '@tanstack/react-query':
         specifier: ^5.28.9
         version: 5.85.0(react@18.3.1)
-      '@uno-game/engine':
-        specifier: workspace:*
-        version: link:../../packages/engine
       '@xstate/react':
         specifier: ^4.1.0
         version: 4.1.3(@types/react@18.3.23)(react@18.3.1)(xstate@5.20.2)

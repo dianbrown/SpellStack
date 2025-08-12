@@ -1,7 +1,7 @@
 {
-  "name": "@uno-game/engine",
+  "name": "@spellstack/engine",
   "version": "1.0.0",
-  "description": "Pure TypeScript UNO game engine",
+  "description": "Pure TypeScript SpellStack game engine",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {

@@ -1,7 +1,7 @@
 {
-  "name": "uno-game",
+  "name": "spellstack",
   "version": "1.0.0",
-  "description": "UNO-like web game with singleplayer and multiplayer support",
+  "description": "SpellStack web game with singleplayer and multiplayer support",
   "private": true,
   "workspaces": [
     "packages/*",
