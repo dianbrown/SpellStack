@@ -133,8 +133,7 @@ export const GameTable: React.FC<GameTableProps> = ({
 // Direction indicator component
 export const DirectionIndicator: React.FC<{ 
   direction: 'clockwise' | 'counter_clockwise';
-  playerCount: number;
-}> = ({ direction, playerCount }) => {
+}> = ({ direction }) => {
   const isClockwise = direction === 'clockwise';
   
   return (

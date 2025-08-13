@@ -36,7 +36,7 @@ Thank you for your interest in contributing to the UNO Game project! This guide 
 
 - `packages/engine/` - Pure TypeScript game engine (core logic)
 - `apps/web/` - React frontend application
-- `supabase/` - Database schema and Edge Functions
+- `packages/server/` - Socket.IO multiplayer server
 
 ## 🛠 Development Workflow
 

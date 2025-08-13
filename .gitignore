@@ -117,9 +117,6 @@ web_modules/
 .yarn/build-state.yml
 .pnp.*
 
-# Supabase
-.supabase
-
 # Playwright
 test-results/
 playwright-report/

@@ -12,7 +12,7 @@ import {
   AIDifficulty
 } from '@spellstack/engine';
 import { Hand } from '../components/Hand';
-import { useSound } from '../contexts/SoundContext-simple';
+import { useSound } from '../contexts/SoundContext';
 
 const SoloGamePage: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -20,7 +20,7 @@ const SoloGamePage: React.FC = () => {
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [aiRetryCount, setAiRetryCount] = useState(0);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const aiTimeoutRef = useRef<number | null>(null);
   const [pendingWildCard, setPendingWildCard] = useState<{ cardIndex: number } | null>(null);
   const { playSound } = useSound();
 

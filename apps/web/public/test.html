@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.IO Test</title>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        #output div { margin: 5px 0; padding: 5px; background: #f0f0f0; }
+        button { padding: 10px 20px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Socket.IO Connection Test</h1>
+    <div id="status">Connecting...</div>
+    <button id="createRoom" onclick="createRoom()" disabled>Create Room</button>
+    <button id="joinRoom" onclick="joinRoom()" disabled>Join Test Room</button>
+    <div id="output"></div>
+
+    <script>
+        const socket = io('http://localhost:8787');
+        const statusDiv = document.getElementById('status');
+        const outputDiv = document.getElementById('output');
+        const createButton = document.getElementById('createRoom');
+        const joinButton = document.getElementById('joinRoom');
+
+        let currentRoom = null;
+
+        socket.on('connect', () => {
+            console.log('Connected:', socket.id);
+            statusDiv.textContent = 'Connected: ' + socket.id;
+            statusDiv.style.color = 'green';
+            createButton.disabled = false;
+            joinButton.disabled = false;
+            log('Connected to server: ' + socket.id);
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected');
+            statusDiv.textContent = 'Disconnected';
+            statusDiv.style.color = 'red';
+            createButton.disabled = true;
+            joinButton.disabled = true;
+            log('Disconnected from server');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+            statusDiv.textContent = 'Connection error: ' + error.message;
+            statusDiv.style.color = 'red';
+            log('Connection error: ' + error.message);
+        });
+
+        socket.on('message', (data) => {
+            console.log('Received:', data);
+            log('Received: ' + JSON.stringify(data));
+            
+            if (data.t === 'room_created') {
+                currentRoom = data.room;
+                log('Room created successfully: ' + data.room);
+            }
+        });
+
+        function log(message) {
+            outputDiv.innerHTML += '<div>' + new Date().toLocaleTimeString() + ' - ' + message + '</div>';
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
+
+        function createRoom() {
+            log('Sending create_room message...');
+            socket.emit('message', { t: 'create_room' });
+        }
+
+        function joinRoom() {
+            if (currentRoom) {
+                log('Joining room: ' + currentRoom);
+                socket.emit('message', { t: 'join_room', room: currentRoom, name: 'TestPlayer' });
+            } else {
+                log('No room to join - create a room first');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -35,12 +35,12 @@ const HomePage: React.FC = () => {
             <p className="text-gray-600 mb-6">
               Create a room and invite friends to play together online in real-time.
             </p>
-            <button
-              className="btn-primary"
-              onClick={() => alert('Multiplayer coming soon!')}
+            <Link
+              to="/multiplayer"
+              className="btn-primary inline-block"
             >
-              Create Room
-            </button>
+              Play Multiplayer
+            </Link>
           </div>
         </div>
 
