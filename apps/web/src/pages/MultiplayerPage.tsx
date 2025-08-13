@@ -87,6 +87,12 @@ export const MultiplayerPage: React.FC = () => {
               Error: {error.msg}
             </div>
           )}
+          
+          {/* Debug Info */}
+          <div className="mt-2 text-xs text-white/40">
+            <div>Host: {window.location.hostname}</div>
+            <div>WebSocket: {import.meta.env.VITE_WS_URL || `http://${window.location.hostname}:8787`}</div>
+          </div>
         </div>
 
         <div className="space-y-6">

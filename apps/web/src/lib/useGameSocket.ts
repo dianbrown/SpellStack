@@ -22,7 +22,25 @@ interface UseGameSocketReturn extends GameSocketState {
   clearError: () => void;
 }
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8787';
+// Determine WebSocket URL based on current location
+const getWebSocketURL = () => {
+  const wsUrl = import.meta.env.VITE_WS_URL;
+  if (wsUrl) {
+    console.log('🔗 Using VITE_WS_URL:', wsUrl);
+    return wsUrl;
+  }
+  
+  // Auto-detect based on current location
+  const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+  const hostname = window.location.hostname;
+  const port = '8787';
+  const autoUrl = `${protocol}//${hostname}:${port}`;
+  
+  console.log('🔗 Auto-detected WebSocket URL:', autoUrl);
+  return autoUrl;
+};
+
+const WS_URL = getWebSocketURL();
 
 export function useGameSocket(): UseGameSocketReturn {
   const socketRef = useRef<Socket | null>(null);
@@ -50,6 +68,8 @@ export function useGameSocket(): UseGameSocketReturn {
     }
 
     console.log('🔌 Attempting to connect to:', WS_URL);
+    console.log('🌐 User agent:', navigator.userAgent);
+    console.log('🔗 Current location:', window.location.href);
     
     const socket = io(WS_URL, {
       autoConnect: true,
@@ -58,15 +78,18 @@ export function useGameSocket(): UseGameSocketReturn {
       reconnectionDelay: 1000,
       // Prevent multiple connections from same client
       forceNew: true,
+      // Add transport options for mobile compatibility
+      transports: ['websocket', 'polling']
     });
 
     socket.on('connect', () => {
       console.log('✅ Connected to game server:', socket.id);
+      console.log('🔗 Transport used:', socket.io.engine.transport.name);
       setState(prev => ({ ...prev, connected: true, error: undefined }));
     });
 
-    socket.on('disconnect', () => {
-      console.log('❌ Disconnected from game server');
+    socket.on('disconnect', (reason) => {
+      console.log('❌ Disconnected from game server:', reason);
       setState(prev => ({ ...prev, connected: false }));
     });
 

@@ -191,7 +191,7 @@ export function legalMoves(state: GameState, playerId: PlayerId): Move[] {
       if (card.type === CardType.Wild || card.type === CardType.WildDrawFour) {
         // Wild cards require color choice
         for (const color of [CardColor.Red, CardColor.Green, CardColor.Blue, CardColor.Yellow]) {
-          // Wild +4 can only be played if player has no matching color
+          // Wild +4 can only be played if player has no cards matching current color
           if (card.type === CardType.WildDrawFour) {
             const hasMatchingColor = playerHand.some(c => 
               c.id !== card.id && c.color === state.currentColor
@@ -200,6 +200,7 @@ export function legalMoves(state: GameState, playerId: PlayerId): Move[] {
               moves.push({ type: 'play_card', cardId: card.id, chosenColor: color });
             }
           } else {
+            // Regular Wild cards can always be played
             moves.push({ type: 'play_card', cardId: card.id, chosenColor: color });
           }
         }

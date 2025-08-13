@@ -5,7 +5,7 @@ import cors from 'cors';
 import { nanoid } from 'nanoid';
 import dotenv from 'dotenv';
 
-import { createGame, legalMoves, applyMove, isTerminal, GameState, PlayerId, redactedView } from '@spellstack/engine';
+import { createGame, legalMoves, applyMove, applyAutomaticDrawCards, isTerminal, GameState, PlayerId, redactedView } from '@spellstack/engine';
 import { C2S, S2C, RedactedState, ErrorCodes } from './types';
 import { 
   Room, 
@@ -216,6 +216,8 @@ io.on('connection', (socket) => {
         case 'propose_move': {
           const { move } = data;
           
+          console.log(`🎮 Move proposed by ${currentPlayerId}:`, move);
+          
           if (!currentRoomId || !currentPlayerId) {
             const error: S2C = { 
               t: 'error', 
@@ -237,12 +239,15 @@ io.on('connection', (socket) => {
             return;
           }
 
+          console.log(`🎯 Current turn: ${room.state.currentPlayerId}, Move by: ${currentPlayerId}`);
+
           // Verify it's player's turn
           if (room.state.currentPlayerId !== currentPlayerId) {
+            console.log(`❌ Turn mismatch! Expected: ${room.state.currentPlayerId}, Got: ${currentPlayerId}`);
             const error: S2C = { 
               t: 'error', 
               code: ErrorCodes.NOT_YOUR_TURN, 
-              msg: 'Not your turn' 
+              msg: `Not your turn (current: ${room.state.currentPlayerId})` 
             };
             socket.emit('message', error);
             return;
@@ -250,11 +255,15 @@ io.on('connection', (socket) => {
 
           // Verify move is legal
           const legal = legalMoves(room.state, currentPlayerId);
+          console.log(`🎲 Legal moves for ${currentPlayerId}:`, legal.length, 'moves');
+          
           const isLegal = legal.some(legalMove => 
             JSON.stringify(legalMove) === JSON.stringify(move)
           );
 
           if (!isLegal) {
+            console.log(`🚫 Illegal move by ${currentPlayerId}:`, move);
+            console.log(`🎲 Legal moves were:`, legal);
             const error: S2C = { 
               t: 'error', 
               code: ErrorCodes.ILLEGAL_MOVE, 
@@ -264,18 +273,55 @@ io.on('connection', (socket) => {
             return;
           }
 
+          console.log(`✅ Legal move by ${currentPlayerId}, applying...`);
+
           // Apply move
           room.state = applyMove(room.state, move);
           room.lastSeen = new Date();
-
-          // Send updated state to all players
-          for (const [playerId, playerInfo] of room.players.entries()) {
-            if (playerInfo.connected) {
-              const stateMsg: S2C = { 
-                t: 'state', 
-                state: createRedactedView(room.state, playerId) 
-              };
-              io.to(playerInfo.socketId).emit('message', stateMsg);
+          
+          // Apply automatic draw cards if needed (handles +2/+4 stacking)
+          if (room.state.drawCount > 0) {
+            console.log(`🎴 Auto-applying draw cards, count: ${room.state.drawCount}, current player: ${room.state.currentPlayerId}`);
+            const stateAfterAutoDraw = applyAutomaticDrawCards(room.state);
+            if (stateAfterAutoDraw !== room.state) {
+              room.state = stateAfterAutoDraw;
+              console.log(`🎴 After auto-draw, count: ${room.state.drawCount}, current player: ${room.state.currentPlayerId}`);
+            }
+          }
+          
+          console.log(`🔄 After move processing, current turn: ${room.state.currentPlayerId}`);
+          
+          // Check if game is terminal (someone won)
+          if (isTerminal(room.state)) {
+            console.log(`🏆 Game ended! Phase: ${room.state.phase}`);
+            // Send final state to all players first
+            for (const [playerId, playerInfo] of room.players.entries()) {
+              if (playerInfo.connected) {
+                const stateMsg: S2C = { 
+                  t: 'state', 
+                  state: createRedactedView(room.state, playerId) 
+                };
+                io.to(playerInfo.socketId).emit('message', stateMsg);
+              }
+            }
+            
+            // Reset room state after a delay so players can see the final state
+            setTimeout(() => {
+              if (room) {
+                console.log(`🔄 Resetting room ${currentRoomId} to lobby after game end`);
+                room.state = null; // Reset to lobby
+              }
+            }, 3000); // 3 second delay
+          } else {
+            // Send updated state to all players (normal turn)
+            for (const [playerId, playerInfo] of room.players.entries()) {
+              if (playerInfo.connected) {
+                const stateMsg: S2C = { 
+                  t: 'state', 
+                  state: createRedactedView(room.state, playerId) 
+                };
+                io.to(playerInfo.socketId).emit('message', stateMsg);
+              }
             }
           }
           break;

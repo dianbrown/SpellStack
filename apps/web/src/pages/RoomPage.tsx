@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { CardColor, legalMoves } from '@spellstack/engine';
 import { useGameSocket } from '../lib/useGameSocket';
 import { Hand } from '../components/Hand';
 import { GameTable } from '../components/GameTable';
@@ -27,6 +28,8 @@ export const RoomPage: React.FC = () => {
   } = useGameSocket();
 
   const [showCopySuccess, setShowCopySuccess] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [pendingWildCard, setPendingWildCard] = useState<{ cardId: string } | null>(null);
 
   useEffect(() => {
     if (!roomCode) {
@@ -39,6 +42,19 @@ export const RoomPage: React.FC = () => {
     // The joinRoom function will handle connection internally
     joinRoom(roomCode, playerName);
   }, [roomCode, playerName, joinRoom, navigate]);
+
+  const handleColorChoice = (color: CardColor) => {
+    if (!pendingWildCard) return;
+    
+    sendMove({ 
+      type: 'play_card', 
+      cardId: pendingWildCard.cardId, 
+      chosenColor: color 
+    });
+    
+    setShowColorPicker(false);
+    setPendingWildCard(null);
+  };
 
   const handleStartGame = () => {
     // Use hostKey from URL if available, otherwise from socket state
@@ -98,6 +114,35 @@ export const RoomPage: React.FC = () => {
   if (gameState && gameState.phase === 'playing') {
     const myHand = gameState.yourHand || [];
     
+    // Use the engine's legalMoves function for proper validation
+    // We need to reconstruct a partial game state for legalMoves to work
+    const gameStateForValidation = {
+      ...gameState,
+      playerHands: {
+        [playerId || '']: myHand,
+        // We don't have other players' hands but legalMoves only needs current player's hand
+      }
+    };
+    
+    // Get legal moves from the engine (this is the source of truth)
+    const legal = playerId ? legalMoves(gameStateForValidation as any, playerId) : [];
+    
+    // Check if drawing is allowed
+    const canDraw = legal.some(move => move.type === 'draw_card');
+    
+    // Check if passing turn is allowed (after drawing a card)
+    const canPass = legal.some(move => move.type === 'pass_turn');
+    
+    console.log('🎮 Game state debug:', {
+      myHandCount: myHand.length,
+      legalMovesCount: legal.length,
+      legalMoveTypes: legal.map(m => m.type),
+      canDraw,
+      canPass,
+      currentPlayer: gameState.currentPlayerId,
+      isMyTurn: gameState.currentPlayerId === playerId
+    });
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 to-purple-900 p-4">
         <div className="max-w-6xl mx-auto">
@@ -119,7 +164,7 @@ export const RoomPage: React.FC = () => {
             topCard={gameState.topCard}
             currentColor={gameState.currentColor}
             drawPileSize={gameState.drawPile.length}
-            onDrawCard={() => sendMove({ type: 'draw_card' })}
+            onDrawCard={canDraw ? () => sendMove({ type: 'draw_card' }) : undefined}
           />
 
           {/* Player's Hand */}
@@ -129,8 +174,25 @@ export const RoomPage: React.FC = () => {
               isCurrentPlayer={gameState.currentPlayerId === playerId}
               onCardSelect={(cardId) => {
                 const card = myHand.find(c => c.id === cardId);
-                if (card) {
-                  sendMove({ type: 'play_card', cardId });
+                if (!card) return;
+                
+                // If it's a wild card, show color picker
+                if (card.type === 'wild' || card.type === 'wild_draw_four') {
+                  setPendingWildCard({ cardId });
+                  setShowColorPicker(true);
+                  return;
+                }
+                
+                // Check if this specific card can be played using legal moves
+                const cardMove = legal.find(move => 
+                  move.type === 'play_card' && move.cardId === cardId
+                );
+                
+                if (cardMove) {
+                  // Send the exact move from legal moves
+                  sendMove(cardMove);
+                } else {
+                  console.log('🚫 Cannot play card:', card.type, card.color, 'Legal moves:', legal);
                 }
               }}
             />
@@ -138,13 +200,56 @@ export const RoomPage: React.FC = () => {
 
           {/* Game Actions */}
           {gameState.currentPlayerId === playerId && (
-            <div className="flex justify-center mt-4">
+            <div className="flex justify-center mt-4 gap-4">
               <button
                 onClick={() => sendMove({ type: 'draw_card' })}
-                className="px-6 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg mr-4"
+                disabled={!canDraw}
+                className={`px-6 py-2 text-white rounded-lg ${
+                  canDraw 
+                    ? 'bg-yellow-600 hover:bg-yellow-700' 
+                    : 'bg-gray-500 cursor-not-allowed opacity-50'
+                }`}
+                title={canDraw ? 'Draw a card' : 'Cannot draw - check your playable cards!'}
               >
                 Draw Card
               </button>
+              
+              {canPass && (
+                <button
+                  onClick={() => sendMove({ type: 'pass_turn' })}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                  title="Pass turn (after drawing)"
+                >
+                  Pass Turn
+                </button>
+              )}
+            </div>
+          )}
+          
+          {/* Color Picker Modal */}
+          {showColorPicker && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4 text-center text-gray-800">Choose a color:</h3>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => handleColorChoice(CardColor.Red)}
+                    className="w-16 h-16 bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+                  />
+                  <button
+                    onClick={() => handleColorChoice(CardColor.Green)}
+                    className="w-16 h-16 bg-green-500 rounded-lg hover:bg-green-600 transition-colors"
+                  />
+                  <button
+                    onClick={() => handleColorChoice(CardColor.Blue)}
+                    className="w-16 h-16 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
+                  />
+                  <button
+                    onClick={() => handleColorChoice(CardColor.Yellow)}
+                    className="w-16 h-16 bg-yellow-500 rounded-lg hover:bg-yellow-600 transition-colors"
+                  />
+                </div>
+              </div>
             </div>
           )}
         </div>
