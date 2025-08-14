@@ -64,9 +64,13 @@ export const MultiplayerPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 to-purple-900 flex items-center justify-center p-4">
       <div className="bg-white/10 backdrop-blur-md rounded-xl p-8 max-w-md w-full">
-        <h1 className="text-3xl font-bold text-white text-center mb-8">
+        <h1 className="text-3xl font-bold text-white text-center mb-4">
           🃏 SpellStack Multiplayer
         </h1>
+        
+        <p className="text-white/70 text-center text-sm mb-8">
+          Up to 4 players can join a game room
+        </p>
 
         {/* Connection Status */}
         <div className="mb-4 text-center">

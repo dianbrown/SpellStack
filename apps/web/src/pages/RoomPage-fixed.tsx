@@ -145,29 +145,23 @@ export const RoomPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 to-purple-900 p-4">
         {/* Large screens: Circular table layout */}
-        <div className="hidden lg:block">
-          <CircularGameTable
-            topCard={gameState.topCard}
-            currentColor={gameState.currentColor}
-            drawPileSize={gameState.drawPile.length}
-            direction={gameState.direction === Direction.Clockwise ? 'clockwise' : 'counterclockwise'}
-            players={gameState.players.map(p => ({
-              id: p.id,
-              name: p.name,
-              handSize: p.handSize,
-            }))}
-            currentPlayerId={gameState.currentPlayerId}
-            myPlayerId={playerId}
-            myHand={myHand}
-            playableCardIds={legal.filter(move => move.type === 'play_card').map(move => move.cardId)}
-            onCardSelect={handleCardSelect}
-            onDrawCard={canDraw ? () => sendMove({ type: 'draw_card' }) : undefined}
-            onLeave={handleLeaveRoom}
-            canDraw={canDraw}
-            canPass={canPass}
-            onPassTurn={canPass ? () => sendMove({ type: 'pass_turn' }) : undefined}
-          />
-        </div>
+        <CircularGameTable
+          topCard={gameState.topCard}
+          currentColor={gameState.currentColor}
+          drawPileSize={gameState.drawPile.length}
+          direction={gameState.direction === Direction.Clockwise ? 'clockwise' : 'counterclockwise'}
+          players={gameState.players.map(p => ({
+            id: p.id,
+            name: p.name,
+            handSize: p.handSize,
+          }))}
+          currentPlayerId={gameState.currentPlayerId}
+          myPlayerId={playerId}
+          myHand={myHand}
+          playableCardIds={legal.filter(move => move.type === 'play_card').map(move => move.cardId)}
+          onCardSelect={handleCardSelect}
+          onDrawCard={canDraw ? () => sendMove({ type: 'draw_card' }) : undefined}
+        />
         
         {/* Small/Medium screens: Original layout */}
         <div className="lg:hidden max-w-6xl mx-auto">
@@ -296,7 +290,7 @@ export const RoomPage: React.FC = () => {
 
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-white mb-4">
-            Players ({seats?.filter(seat => seat.connected).length || 0}/4)
+            Players ({seats?.filter(seat => seat.connected).length || 0}/8)
           </h2>
           <div className="space-y-2">
             {seats?.map((seat, index) => (

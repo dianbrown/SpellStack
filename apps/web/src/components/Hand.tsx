@@ -262,35 +262,35 @@ export const OpponentHand: React.FC<{
   };
 
   return (
-    <div className={`flex ${positionClasses[position]} gap-2`}>
+    <div className={`flex ${positionClasses[position]} gap-3`}>
       <div className={`
-        text-sm font-semibold px-3 py-1 rounded-full
+        text-base font-bold px-4 py-2 rounded-full border-2 shadow-lg
         ${isCurrentPlayer 
-          ? 'bg-yellow-400 text-black' 
-          : 'bg-gray-200 text-gray-700'
+          ? 'bg-yellow-400 text-black border-yellow-300' 
+          : 'bg-white/90 text-gray-800 border-white/50'
         }
       `}>
         {playerName} ({cardCount})
       </div>
       
       <div className="flex gap-1">
-        {Array.from({ length: Math.min(cardCount, 10) }, (_, i) => (
+        {Array.from({ length: Math.min(cardCount, 8) }, (_, i) => (
           <motion.div
             key={i}
-            className="card card-back w-8 h-12 flex-shrink-0"
+            className="card card-back w-12 h-16 flex-shrink-0 bg-blue-900 border-2 border-blue-800 rounded-lg shadow-lg"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: i * 0.05 }}
-            style={{ marginLeft: i > 0 ? '-6px' : '0' }}
+            style={{ marginLeft: i > 0 ? '-8px' : '0' }}
           >
             <div className="h-full flex items-center justify-center">
-              <div className="text-white text-xs font-bold">SPELL</div>
+              <div className="text-white text-xs font-bold transform rotate-90">SPELL</div>
             </div>
           </motion.div>
         ))}
-        {cardCount > 10 && (
-          <div className="text-xs text-gray-500 ml-2 flex items-center">
-            +{cardCount - 10}
+        {cardCount > 8 && (
+          <div className="text-sm text-white bg-black/50 rounded-full px-2 py-1 ml-2 flex items-center font-semibold">
+            +{cardCount - 8}
           </div>
         )}
       </div>
