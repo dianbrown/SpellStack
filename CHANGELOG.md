@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Responsive UI with TailwindCSS styling
 - Card animation framework with Framer Motion
 - Monorepo structure with pnpm workspaces
-- Supabase backend integration (prepared for multiplayer)
+- Socket.IO server integration (for multiplayer)
 - CI/CD pipeline with GitHub Actions
 - Comprehensive documentation and contribution guidelines
 

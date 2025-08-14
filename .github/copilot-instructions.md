@@ -1,9 +1,11 @@
-# UNO Game Project Instr## Checklist Progress
+# SpellStack Game Project Instructions
+
+## Checklist Progress
 - [x] Project requirements clarified
 - [x] Project structure scaffolded
 - [x] Core game engine implemented
 - [x] Frontend components created
-- [x] Supabase integration added
+- [x] Socket.IO multiplayer implementation
 - [x] PWA configuration
 - [x] Testing setup
 - [x] Documentation completed
@@ -15,7 +17,7 @@
 - **Singleplayer Mode**: Working AI opponents with difficulty levels
 - **React Frontend**: Complete UI with card animations and responsive design
 - **PWA Support**: Service worker and web app manifest configured
-- **Supabase Backend**: Database schema and Edge Functions ready
+- **Socket.IO Multiplayer**: Real-time multiplayer with authoritative server
 - **Development Server**: Running at http://localhost:3001
 - **Build System**: pnpm workspaces with TypeScript compilation
 - **Testing**: Vitest unit tests + Playwright E2E setup
@@ -26,13 +28,13 @@ This is a UNO-like web game with singleplayer and multiplayer functionality.
 - Monorepo with pnpm workspaces
 - `/packages/engine` - Pure TypeScript game engine
 - `/apps/web` - React frontend with Vite
-- Supabase backend for multiplayer
+- Socket.IO server for multiplayer
 - PWA support for offline play
 
 ## Tech Stack
 - Frontend: React + TypeScript + Vite + TailwindCSS + Framer Motion + Howler.js
 - State: XState for game state, Zustand for UI state  
-- Backend: Supabase (Postgres, Realtime, Edge Functions)
+- Backend: Socket.IO server for real-time multiplayer
 - Testing: Vitest + Playwright
 - Package Manager: pnpm
 
@@ -47,7 +49,7 @@ This is a UNO-like web game with singleplayer and multiplayer functionality.
 - [x] Project structure scaffolded
 - [x] Core game engine implemented
 - [x] Frontend components created
-- [x] Supabase integration added
+- [x] Socket.IO multiplayer implementation
 - [x] PWA configuration
 - [x] Testing setup
 - [x] Documentation completed

@@ -1,6 +1,6 @@
 # SpellStack - Web-based Card Game
 
-A modern, full-featured SpellStack card game built with React, TypeScript, and Supabase. Features both singleplayer (vs AI) and multiplayer modes, with PWA support for offline play.
+A modern, full-featured SpellStack card game built with React, TypeScript, and Socket.IO. Features both singleplayer (vs AI) and multiplayer modes, with PWA support for offline play.
 
 ## 🎮 Features
 
@@ -12,7 +12,7 @@ A modern, full-featured SpellStack card game built with React, TypeScript, and S
 
 ### � Multiplayer Mode (In Development)
 - Create/join rooms with short codes
-- Real-time gameplay via Supabase
+- Real-time multiplayer via Socket.IO
 - Server-authoritative game validation
 - Reconnection support
 
@@ -27,7 +27,7 @@ A modern, full-featured SpellStack card game built with React, TypeScript, and S
 - **Frontend**: React + TypeScript + Vite
 - **Styling**: TailwindCSS + Framer Motion
 - **State Management**: XState (game logic) + Zustand (UI state)
-- **Backend**: Supabase (Postgres, Realtime, Edge Functions)
+- **Backend**: Socket.IO server for multiplayer
 - **Audio**: Howler.js
 - **Testing**: Vitest + Playwright
 - **Build System**: pnpm workspaces
@@ -68,10 +68,11 @@ A modern, full-featured SpellStack card game built with React, TypeScript, and S
    cp .env.example .env
    ```
 
-2. **Configure Supabase** (for multiplayer features)
-   - Create a Supabase project at https://supabase.com
-   - Add your project URL and anon key to `.env`
-   - Run database migrations: `pnpm db:setup`
+2. **Start the multiplayer server** (for multiplayer features)
+   ```bash
+   cd packages/server
+   pnpm run dev
+   ```
 
 ## 📁 Project Structure
 
@@ -92,7 +93,7 @@ UNO/
 │   │   └── lib/            # Utility libraries
 │   ├── public/             # Static assets
 │   └── package.json
-├── supabase/               # Database schema and functions
+├── packages/server/          # Socket.IO multiplayer server
 └── pnpm-workspace.yaml     # Monorepo configuration
 ```
 
@@ -132,10 +133,11 @@ npm run build
 # Deploy the 'dist' folder
 ```
 
-**Backend (Supabase)**
+**Server**
 ```bash
-supabase db push
-supabase functions deploy
+cd packages/server
+pnpm run build
+pnpm start
 ```
 
 ## 🎯 Game Rules
@@ -168,7 +170,7 @@ Standard UNO rules with these specifics:
 - [x] PWA configuration for offline play
 
 ### Phase 2: Multiplayer 🚧
-- [ ] Supabase integration for real-time multiplayer
+- [x] Socket.IO multiplayer implementation
 - [ ] Room creation and joining system
 - [ ] Server-side move validation
 - [ ] Reconnection handling
@@ -203,7 +205,7 @@ The core singleplayer experience is fully functional with:
 Ready for GitHub upload and further development! 🚀
 - **Audio**: Howler.js
 - **State Management**: XState (game logic) + Zustand (UI state)
-- **Backend**: Supabase (Postgres + Realtime + Edge Functions)
+- **Backend**: Socket.IO server for real-time multiplayer
 - **Game Engine**: Pure TypeScript (deterministic, testable)
 - **Testing**: Vitest + Playwright
 - **Package Manager**: pnpm (workspaces)
@@ -229,7 +231,7 @@ UNO/
 │       │   ├── contexts/        # React contexts
 │       │   └── lib/             # Utilities
 │       └── public/              # Static assets
-├── supabase/            # Database and backend
+├── packages/server/       # Socket.IO multiplayer server
 │   ├── migrations/              # SQL migrations
 │   └── functions/               # Edge functions
 └── docs/                # Documentation
@@ -262,42 +264,26 @@ cp .env.example .env
 Fill in your environment variables:
 
 ```env
-# Supabase Configuration (for multiplayer)
-VITE_SUPABASE_URL=your-supabase-project-url
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+# Socket.IO Server Configuration (for multiplayer)
+VITE_WS_URL=http://localhost:8787
+PORT=8787
+CORS_ORIGIN=http://localhost:3001
 
 # Development
 NODE_ENV=development
 ```
 
-### 3. Database Setup (Optional for Singleplayer)
+### 3. Start the multiplayer server (Optional for Singleplayer)
 
-For multiplayer functionality, set up Supabase:
-
-#### Option A: Local Supabase (Recommended for Development)
+For multiplayer functionality, start the Socket.IO server:
 
 ```bash
-# Install Supabase CLI
-npm install -g supabase
-
-# Start local Supabase
-cd UNO
-supabase start
-
-# Run migrations
-supabase db reset
+cd packages/server
+pnpm install
+pnpm run dev
 ```
 
-#### Option B: Hosted Supabase
-
-1. Create a project at [supabase.com](https://supabase.com)
-2. Get your project URL and anon key
-3. Run migrations in the SQL editor or via CLI:
-
-```bash
-supabase link --project-ref your-project-ref
-supabase db push
-```
+The server will run on `http://localhost:8787` by default.
 
 ### 4. Start Development
 

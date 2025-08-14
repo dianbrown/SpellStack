@@ -34,8 +34,8 @@ export const GameTable: React.FC<GameTableProps> = ({
         <motion.div
           onClick={onDrawCard}
           className={`
-            relative cursor-pointer
-            ${onDrawCard ? 'hover:scale-105' : ''}
+            relative 
+            ${onDrawCard ? 'cursor-pointer hover:scale-105' : 'cursor-not-allowed opacity-50'}
           `}
           whileTap={onDrawCard ? { scale: 0.95 } : {}}
         >
@@ -133,8 +133,7 @@ export const GameTable: React.FC<GameTableProps> = ({
 // Direction indicator component
 export const DirectionIndicator: React.FC<{ 
   direction: 'clockwise' | 'counter_clockwise';
-  playerCount: number;
-}> = ({ direction, playerCount }) => {
+}> = ({ direction }) => {
   const isClockwise = direction === 'clockwise';
   
   return (

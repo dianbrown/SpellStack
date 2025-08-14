@@ -8,6 +8,7 @@ import {
   Direction, 
   GamePhase,
   CreateGameOptions,
+  RedactedGameState,
   GameResult
 } from './types.js';
 import { RNG, createDeck, dealCards, calculateHandScore } from './deck.js';
@@ -65,6 +66,29 @@ export function createGame(options: CreateGameOptions): GameState {
       ...settings,
     },
   };
+}
+
+/**
+ * Create a redacted view of the game state for a specific player
+ * Hides other players' hands and only shows card counts
+ */
+export function redactedView(state: GameState, viewerId: PlayerId | null): RedactedGameState {
+  const redacted: RedactedGameState = {
+    ...state,
+    playerHands: {},
+  };
+
+  // Convert all hands to counts only
+  for (const [playerId, hand] of Object.entries(state.playerHands)) {
+    redacted.playerHands[playerId as PlayerId] = { count: hand.length };
+  }
+
+  // Add full hand only for the viewing player
+  if (viewerId && state.playerHands[viewerId]) {
+    redacted.yourHand = state.playerHands[viewerId];
+  }
+
+  return redacted;
 }
 
 /**
@@ -167,7 +191,7 @@ export function legalMoves(state: GameState, playerId: PlayerId): Move[] {
       if (card.type === CardType.Wild || card.type === CardType.WildDrawFour) {
         // Wild cards require color choice
         for (const color of [CardColor.Red, CardColor.Green, CardColor.Blue, CardColor.Yellow]) {
-          // Wild +4 can only be played if player has no matching color
+          // Wild +4 can only be played if player has no cards matching current color
           if (card.type === CardType.WildDrawFour) {
             const hasMatchingColor = playerHand.some(c => 
               c.id !== card.id && c.color === state.currentColor
@@ -176,6 +200,7 @@ export function legalMoves(state: GameState, playerId: PlayerId): Move[] {
               moves.push({ type: 'play_card', cardId: card.id, chosenColor: color });
             }
           } else {
+            // Regular Wild cards can always be played
             moves.push({ type: 'play_card', cardId: card.id, chosenColor: color });
           }
         }

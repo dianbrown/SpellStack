@@ -18,9 +18,27 @@ export const Hand: React.FC<HandProps> = ({
   onCardSelect,
   isCurrentPlayer = false,
 }) => {
-  const maxCards = 15; // Max cards to show without scrolling
-  const shouldScroll = cards.length > maxCards;
   const [showFullHand, setShowFullHand] = useState(false);
+  
+  // Mobile pagination
+  const cardsPerPage = 4; // Show 4 cards at a time on mobile
+  const [currentPage, setCurrentPage] = useState(0);
+  const totalPages = Math.ceil(cards.length / cardsPerPage);
+  const shouldPaginate = cards.length > cardsPerPage;
+  
+  const getCurrentPageCards = () => {
+    const start = currentPage * cardsPerPage;
+    const end = start + cardsPerPage;
+    return cards.slice(start, end);
+  };
+
+  const goToNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages - 1));
+  };
+
+  const goToPrevPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 0));
+  };
 
   return (
     <div className="w-full relative">
@@ -46,12 +64,12 @@ export const Hand: React.FC<HandProps> = ({
             exit={{ opacity: 0, y: -20 }}
             className="hidden md:block"
           >
-            <div className="bg-gray-100 rounded-lg p-4 max-h-96 overflow-hidden border-2 border-gray-200">
+            <div className="max-h-96 overflow-visible py-4">
               <div 
-                className="flex gap-3 overflow-x-auto pb-4"
+                className="flex gap-3 overflow-x-auto pb-4 pt-6"
                 style={{ 
                   scrollbarWidth: 'thin',
-                  scrollbarColor: '#4B5563 #E5E7EB'
+                  scrollbarColor: '#4B5563 rgba(255,255,255,0.2)'
                 }}
               >
                 {cards.map((card, index) => (
@@ -73,11 +91,6 @@ export const Hand: React.FC<HandProps> = ({
                   </motion.div>
                 ))}
               </div>
-              {cards.length > 5 && (
-                <div className="text-xs text-gray-600 text-center">
-                  Scroll horizontally to see all {cards.length} cards
-                </div>
-              )}
             </div>
           </motion.div>
         ) : (
@@ -88,36 +101,82 @@ export const Hand: React.FC<HandProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {/* Mobile: Horizontal scroll */}
+            {/* Mobile: Paginated view with navigation */}
             <div className="md:hidden">
-              <div 
-                className={`
-                  flex gap-2 pb-4
-                  ${shouldScroll ? 'overflow-x-auto' : 'justify-center'}
-                `}
-                style={{ 
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: '#4B5563 transparent'
-                }}
-              >
-                {cards.map((card, index) => (
-                  <motion.div
-                    key={card.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05, duration: 0.3 }}
-                    className="flex-shrink-0"
+              {/* Navigation buttons and page indicator */}
+              {shouldPaginate && (
+                <div className="flex justify-between items-center mb-3">
+                  <button
+                    onClick={goToPrevPage}
+                    disabled={currentPage === 0}
+                    className="flex items-center gap-1 px-3 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm rounded-full transition-colors shadow-sm"
                   >
-                    <Card
-                      card={card}
-                      isPlayable={playableCards.includes(card.id)}
-                      isSelected={selectedCard === card.id}
-                      onClick={isCurrentPlayer ? () => onCardSelect?.(card.id) : undefined}
-                      size="medium"
-                    />
-                  </motion.div>
-                ))}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Prev
+                  </button>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-white/80">
+                      {currentPage + 1} of {totalPages}
+                    </span>
+                    <div className="flex gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setCurrentPage(i)}
+                          className={`w-2 h-2 rounded-full transition-colors ${
+                            i === currentPage ? 'bg-blue-400' : 'bg-white/30'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={goToNextPage}
+                    disabled={currentPage >= totalPages - 1}
+                    className="flex items-center gap-1 px-3 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm rounded-full transition-colors shadow-sm"
+                  >
+                    Next
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              
+              {/* Cards grid */}
+              <div className="flex justify-center gap-2 pb-2 min-h-[120px]">
+                <AnimatePresence mode="wait">
+                  {getCurrentPageCards().map((card, index) => (
+                    <motion.div
+                      key={`${card.id}-${currentPage}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ delay: index * 0.1, duration: 0.3 }}
+                      className="flex-shrink-0"
+                    >
+                      <Card
+                        card={card}
+                        isPlayable={playableCards.includes(card.id)}
+                        isSelected={selectedCard === card.id}
+                        onClick={isCurrentPlayer ? () => onCardSelect?.(card.id) : undefined}
+                        size="medium"
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
+              
+              {/* Card count indicator */}
+              {cards.length > 0 && (
+                <div className="text-center text-xs text-white/60 mt-2">
+                  Showing {Math.min((currentPage * cardsPerPage) + getCurrentPageCards().length, cards.length)} of {cards.length} cards
+                </div>
+              )}
             </div>
 
             {/* Desktop: Fan layout */}

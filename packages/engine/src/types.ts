@@ -138,3 +138,9 @@ export interface PublicGameState extends Omit<GameState, 'playerHands' | 'drawPi
   drawPileSize: number;
   playerHands: Record<PlayerId, { size: number }>;
 }
+
+// Redacted state that clients receive (no secret info)
+export interface RedactedGameState extends Omit<GameState, 'playerHands'> {
+  playerHands: Record<PlayerId, { count: number }>;
+  yourHand?: GameState['playerHands'][PlayerId]; // Only present for the viewing player
+}
