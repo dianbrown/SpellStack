@@ -169,6 +169,7 @@ export const RoomPage: React.FC = () => {
 
           {/* Player's Hand */}
           <div className="mt-8">
+            <h3 className="text-white text-lg font-semibold mb-3">Your Hand ({myHand.length} cards)</h3>
             <Hand
               cards={myHand}
               isCurrentPlayer={gameState.currentPlayerId === playerId}
@@ -197,6 +198,30 @@ export const RoomPage: React.FC = () => {
               }}
             />
           </div>
+
+          {/* Other Players Info */}
+          {gameState.players && gameState.players.length > 1 && (
+            <div className="mt-6">
+              <h3 className="text-white text-lg font-semibold mb-3">Other Players</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {gameState.players.filter(p => p.id !== playerId).map((player) => (
+                  <div key={player.id} className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+                    <div className="text-white">
+                      <div className="font-semibold">{player.name}</div>
+                      <div className="text-sm opacity-80">
+                        {player.handSize} cards
+                      </div>
+                      {gameState.currentPlayerId === player.id && (
+                        <div className="text-xs bg-yellow-400 text-black px-2 py-1 rounded mt-1 inline-block">
+                          Current turn
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Game Actions */}
           {gameState.currentPlayerId === playerId && (
